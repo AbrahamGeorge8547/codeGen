@@ -18,6 +18,7 @@ func createEntity(w http.ResponseWriter, r *http.Request) {
 	var entity dTypes.Entity
 	json.Unmarshal(reqBody, &entity)
 	generators.CreateModel(entity)
+	generators.CreateInterface(entity)
 }
 func updateEntity(w http.ResponseWriter, r *http.Request) {
 
@@ -25,6 +26,7 @@ func updateEntity(w http.ResponseWriter, r *http.Request) {
 	var entity dTypes.Entity
 	json.Unmarshal(reqBody, &entity)
 	generators.UpdateModel(entity)
+	generators.UpdateInterface(entity)
 }
 
 func handleRequests() {

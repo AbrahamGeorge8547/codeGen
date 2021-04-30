@@ -1,4 +1,4 @@
-import {Schema,  model} from 'mongoose';
+import {Schema,   model} from 'mongoose';
 
 
 const ItemSchema = new Schema({ 
@@ -9,4 +9,4 @@ const ItemSchema = new Schema({
 	website: {required: true, type: String} 
 	})
 
-export default model<IItem>("Item",  ItemSchema)
+export default model<IItem>("Item",   ItemSchema)
