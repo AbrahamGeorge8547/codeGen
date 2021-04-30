@@ -12,7 +12,8 @@ import (
 
 func CreateModel(entity dTypes.Entity) {
 	// const fileData =
-	imports := "import * as mongoose from 'mongoose';\n\n\n"
+	importsModel := "import {Schema, model} from 'mongoose';\n\n\n"
+	importsInterface := "import {Document} from 'mongoose';\n\n\n"
 	var elements string
 	var interfaceElements string
 	for i, s := range entity.TypeDetails {
@@ -42,25 +43,31 @@ func CreateModel(entity dTypes.Entity) {
 		}
 
 	}
-	schema := fmt.Sprintf("const %sSchema = new mongoose.Schema({\n%s})\n\n", strings.Title(entity.ModelName), elements)
-	modelInterface := fmt.Sprintf("export interface I%s extends mongoose.Document {\n%s}\n\n", strings.Title(entity.ModelName), interfaceElements)
-	exports := fmt.Sprintf("export default mongoose.model<I%s>(\"%s\", %sSchema)", strings.Title(entity.ModelName), strings.Title(entity.ModelName), strings.Title(entity.ModelName))
-	writeFile := fmt.Sprintf("%s%s%s%s", imports, schema, modelInterface, exports)
-	fileName := fmt.Sprintf("%s.model.ts", entity.ModelName)
-	ioutil.WriteFile(fileName, []byte(writeFile), 0755)
+	schema := fmt.Sprintf("const %sSchema = new Schema({\n%s})\n\n", strings.Title(entity.ModelName), elements)
+	modelInterface := fmt.Sprintf("export interface I%s extends Document {\n%s}\n\n", strings.Title(entity.ModelName), interfaceElements)
+	exports := fmt.Sprintf("export default model<I%s>(\"%s\", %sSchema)", strings.Title(entity.ModelName), strings.Title(entity.ModelName), strings.Title(entity.ModelName))
+	writeModel := fmt.Sprintf("%s%s%s", importsModel, schema, exports)
+	writeInterface := fmt.Sprintf("%s%s", importsInterface, modelInterface)
+	modelFileName := fmt.Sprintf("%s.model.ts", entity.ModelName)
+	interfaceFileName := fmt.Sprintf("%s.interface.ts", entity.ModelName)
+	ioutil.WriteFile(modelFileName, []byte(writeModel), 0755)
+	ioutil.WriteFile(interfaceFileName, []byte(writeInterface), 0755)
 }
 
 func UpdateModel(entity dTypes.Entity) {
-	fileName := fmt.Sprintf("%s.model.ts", entity.ModelName)
-	dat, err := ioutil.ReadFile(fileName)
+	modelFile := fmt.Sprintf("%s.model.ts", entity.ModelName)
+	interfaceFile:= fmt.Sprintf("%s.interface.ts", entity.ModelName)
+	modelDat, err := ioutil.ReadFile(modelFile)
+	interfaceDat, err := ioutil.ReadFile(interfaceFile)
 	if err != nil {
 		fmt.Println(err)
 	}
-	modelRe, _ := regexp.Compile(`new mongoose.Schema\((\{[^]]+})`)
-	interfaceRe, _ := regexp.Compile(`mongoose.Document (?s)(\{.*\})`)
-	dataString := string(dat)
-	modelMatch := modelRe.FindStringSubmatch(dataString)[1]
-	interfaceMatch := interfaceRe.FindStringSubmatch(dataString)[1]
+	modelRe, _ := regexp.Compile(`new Schema\((\{[^]]+})`)
+	interfaceRe, _ := regexp.Compile(`Document (?s)(\{.*\})`)
+	modelString := string(modelDat)
+	interfaceString := string(interfaceDat)
+	modelMatch := modelRe.FindStringSubmatch(modelString)[1]
+	interfaceMatch := interfaceRe.FindStringSubmatch(interfaceString)[1]
 	var wordRe = regexp.MustCompile(`(\w+)`)
 	modelJson := wordRe.ReplaceAllString(modelMatch, `"$1"`)
 	wordReSpecial := regexp.MustCompile(`(\w+\[\]|\w+)`)
@@ -119,13 +126,19 @@ func UpdateModel(entity dTypes.Entity) {
 	reg = regexp.MustCompile("^(.*?){")
 	formattedModel = reg.ReplaceAllString(formattedModel, `{ \n`)
 	reg = regexp.MustCompile(`}}`)
-	formattedModel = reg.ReplaceAllString(formattedModel, `} \n }`)
-	replacementModel := fmt.Sprintf("new mongoose.Schema(%s", formattedModel)
-	replacementInterface := fmt.Sprintf("mongoose.Document %s", formattedInterface)
-	newData := modelRe.ReplaceAllString(dataString, replacementModel)
-	newData = interfaceRe.ReplaceAllString(newData, replacementInterface)
-	formattedOut := strings.Replace(newData, `\n`, "\n", -1)
-	ioutil.WriteFile(fileName, []byte(formattedOut), 0755)
+	formattedModel = reg.ReplaceAllString(formattedModel, `} \n}`)
+	replacementModel := fmt.Sprintf("new Schema(%s", formattedModel)
+	replacementInterface := fmt.Sprintf("Document %s", formattedInterface)
+	newDataModel := modelRe.ReplaceAllString(modelString, replacementModel)
+	newDataInterface := interfaceRe.ReplaceAllString(interfaceString, replacementInterface)
+	formattedOutModel := strings.Replace(newDataModel, `\n`, "\n\t", -1)
+	formattedOutModel = strings.Replace(formattedOutModel, `,`, ", ", -1)
+	formattedOutModel = strings.Replace(formattedOutModel, `:`, ": ", -1)
+	formattedOutInterface := strings.Replace(newDataInterface, `\n`, "\n\t", -1)
+	formattedOutInterface = strings.Replace(formattedOutInterface, `,`, ", ", -1)
+	formattedOutInterface = strings.Replace(formattedOutInterface, `:`, ": ", -1)
+	ioutil.WriteFile(interfaceFile, []byte(formattedOutInterface), 0755)
+	ioutil.WriteFile(modelFile, []byte(formattedOutModel), 0755)
 
 	// jsonParsed, err := gabs.ParseJSON([]byte(s))
 	// fmt.Println(jsonParsed)
